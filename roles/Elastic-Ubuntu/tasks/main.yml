@@ -1,0 +1,163 @@
+#Elastic-Ubuntu
+- name: Install ELK Dependencies
+  apt:
+    name:
+      - openjdk-11-jdk
+      - apt-transport-https
+      - curl
+      - gpgv
+      - gpgsm
+      - gnupg-l10n
+      - gnupg
+      - dirmngr
+    state: latest
+
+- name: Get PGP Key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+#Installation of Ealstic Search
+- name: Install Elastic_Search packages from the Source
+  apt_repository:
+    repo: deb https://artifacts.elastic.co/packages/7.x/apt stable main
+    state: present
+
+- name: Installing Elastic_Search
+  apt:
+    name: elasticsearch
+    state: latest
+    update_cache: yes
+
+- name: Configuring the Cluster name of Elastic_Search
+  lineinfile:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    line: "cluster.name: demo-elk"
+    state: present
+
+- name: Configuring the Cluster Descriptibe name Elastic_Search
+  lineinfile:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    line: "node.name: elk-1"
+    state: present
+
+- name: Adding the network.host in Elastic_Search
+  lineinfile:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    line: "network.host: 0.0.0.0"
+    state: present
+
+- name: Adding http.port in Elastic_Search
+  lineinfile:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    line: "http.port: 9200"
+    state: present
+
+- name: Adding discovery.type in Elastic_Search
+  lineinfile:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    line: "discovery.type: single-node"
+    state: present
+
+- name: Creating an empty file for startup-timeout.conf 1 of 2
+  file:
+    path: "/etc/systemd/system/elasticsearch.service.d"
+    state: directory
+
+- name: Creating an empty file for startup-timeout.conf 2 of 2
+  file:
+    path: "/etc/systemd/system/elasticsearch.service.d/startup-timeout.conf"
+    state: touch
+
+- name: Preventing the systemd service start operation from timing out
+  copy:
+    dest: "/etc/systemd/system/elasticsearch.service.d/startup-timeout.conf"
+    content: |
+      [Service]
+      TimeoutStartSec=3min
+
+- name: Run daemon-reload for Elastic_Search
+  systemd: daemon_reload=yes
+
+- name: Disabling masking of Elastic_Search
+  systemd:
+    name: elasticsearch
+    enabled: yes
+    masked: no
+
+- name: Confirmation of Elastic_Search is enabled
+  tags: serviceon
+  service:
+    name: elasticsearch
+    state: restarted
+    enabled: true
+
+- name: Start Elastic_Search service
+  shell: systemctl start elasticsearch
+
+#Installation of Kibana
+- name: Installing Kibana
+  apt:
+    name: kibana
+    state: latest
+    update_cache: yes
+
+- name: Adding server.port in Kibana
+  lineinfile:
+    dest: /etc/kibana/kibana.yml
+    line: "server.port: 5601"
+    state: present
+
+- name: Adding server.host in Kibana
+  lineinfile:
+    dest: /etc/kibana/kibana.yml
+    line: 'server.host: “0.0.0.0”'
+    state: present
+
+- name: Adding server.name in Kibana
+  lineinfile:
+    dest: /etc/kibana/kibana.yml
+    line: 'server.name: “demo-kibana”'
+    state: present
+
+- name: Adding elasticsearch.hosts in Kibana
+  lineinfile:
+    dest: /etc/kibana/kibana.yml
+    line: 'elasticsearch.hosts: [“http://0.0.0.0:9200"]'
+    state: present
+
+- name: Run daemon-reload for Kibana
+  systemd: daemon_reload=yes
+
+- name: Confirmation of Kibana is enabled
+  tags: serviceon
+  service:
+    name: kibana
+    state: restarted
+    enabled: true
+
+- name: Start Kibana
+  shell: systemctl start kibana
+
+#Installation of LogStash
+- name: Installing LogStash
+  apt:
+    name: logstash
+    state: latest
+    update_cache: yes
+
+- name: Run daemon-reload for LogStash
+  systemd: daemon_reload=yes
+
+- name: Enable service LogStash
+  systemd:
+    name: logstash
+    enabled: yes
+
+- name: Confirmation of LogStash is enabled
+  tags: serviceon
+  service:
+    name: logstash
+    state: restarted
+    enabled: true
+
